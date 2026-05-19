@@ -15,7 +15,7 @@ Welcome to the documentation for the `local_shula` Moodle plugin.
 
 ### Version Information
 *   **Component:** `local_shula`
-*   **Release:** 1.2.4 (2026051803)
+*   **Release:** 1.2.5 (2026051900)
 *   **Requirements:** Moodle 4.1+
 
 ---
