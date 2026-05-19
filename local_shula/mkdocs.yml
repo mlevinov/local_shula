@@ -1,15 +1,7 @@
-# === Site Information ===
-site_name: Shula AI Moodle Plugin
-site_description: 'Documentation for the Shula AI (local_shula) Moodle Plugin.'
-site_author: 'Levinov Michael'
+site_name: Shula Moodle Plugin
+site_description: Documentation for the local_shula Moodle plugin.
+site_author: Shula AI
 
-site_url: 'https://mlevinov.github.io/local_shula/'
-
-# === Repository ===
-repo_name: 'mlevinov/local_shula'
-repo_url: 'https://github.com/mlevinov/local_shula.git'
-
-# === Theme Configuration ===
 theme:
   name: material
   features:
@@ -31,7 +23,6 @@ theme:
         icon: material/brightness-4
         name: Switch to light mode
 
-# === Navigation Menu ===
 nav:
   - Home: index.md
   - Architecture: architecture.md
@@ -41,6 +32,7 @@ nav:
   - Tasks & Webhooks:
     - Event Observer: tasks/observer.md
     - Background Tasks: tasks/background_tasks.md
+  - Testing: testing.md
 
 markdown_extensions:
   - admonition

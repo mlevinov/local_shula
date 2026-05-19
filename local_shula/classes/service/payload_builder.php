@@ -53,7 +53,7 @@ class payload_builder {
     /**
      * Builds the top-level MoodleCourseItem schema.
      *
-     * @param object $course The Moodle course record.
+     * @param \stdClass $course The Moodle course record.
      * @return array The course item payload.
      */
     public static function build_course_item($course) {
@@ -82,8 +82,8 @@ class payload_builder {
     /**
      * Builds the MoodleSectionItem schema.
      *
-     * @param object $section_info The section info from modinfo.
-     * @param object $modinfo The fast_modinfo object for the course.
+     * @param \section_info $section_info The section info from modinfo.
+     * @param \course_modinfo $modinfo The fast_modinfo object for the course.
      * @param bool $include_modules If false, skips building child modules to save payload size.
      * @return array The section item payload.
      */
@@ -115,7 +115,7 @@ class payload_builder {
      * Builds the Module item natively. 
      * Retrieves generic data, instance ID, and attached physical files.
      *
-     * @param object $cm The course module object from modinfo.
+     * @param \cm_info $cm The course module object from modinfo.
      * @return array The module item payload.
      */
     public static function build_module_item($cm) {
@@ -182,8 +182,8 @@ class payload_builder {
      * Helper to dynamically construct ContentItemSchemas for native Moodle instances.
      * Evaluates descriptions, pages, and URLs, filtering out empty HTML noise.
      *
-     * @param object $cm The course module object.
-     * @param object $instance The module instance record.
+     * @param \cm_info $cm The course module object.
+     * @param \stdClass $instance The module instance record.
      * @return array Array of virtual content items.
      */
     public static function build_virtual_items_from_cm($cm, $instance) {
@@ -258,19 +258,72 @@ class payload_builder {
     }
 
     /**
+     * Returns the strict allowlist of fileareas that only contain teacher-authored content.
+     *
+     * This mapping ensures that the AI tutor only ingests content provided by educators
+     * (e.g., resource contents, assignment instructions) while explicitly ignoring
+     * student-contributed files (e.g., forum attachments, assignment submissions, wiki edits).
+     *
+     * Separated for PHPUnit testing and security auditing to prevent silent regressions.
+     *
+     * @return array<string, string[]> Associative array where keys are Moodle components (mod_*)
+     *                                 and values are arrays of allowed fileareas.
+     */
+    public static function get_safe_teacher_fileareas(): array {
+        return [
+            'mod_resource'  => ['content', 'intro'],
+            'mod_page'      => ['content', 'intro'],
+            'mod_folder'    => ['content', 'intro'],
+            'mod_assign'    => ['introattachment', 'intro'], 
+            'mod_book'      => ['chapter', 'intro'],
+            'mod_scorm'     => ['package', 'intro'],
+            'mod_imscp'     => ['content', 'intro'],
+            'mod_lesson'    => ['page_contents', 'intro'],
+            'mod_url'       => ['intro'],
+            'mod_forum'     => ['intro'], 
+            'mod_quiz'      => ['intro'],
+            'mod_label'     => ['intro']
+        ];
+    }
+
+    /**
      * Queries Moodle's File Storage API to build the files attached to the context.
      *
-     * @param object $cm The course module object.
-     * @return array Array of file items.
+     * This method filters files based on the security allowlist defined in
+     * get_safe_teacher_fileareas() to prevent accidental ingestion of student data.
+     *
+     * @param \cm_info $cm The course module object from modinfo.
+     * @return array Array of file items matching the Django ContentItemSchema.
      */
     public static function build_file_items_from_cm($cm) {
         global $DB;
         $fs = get_file_storage();
         $context = \context_module::instance($cm->id);
 
-        $sql = "SELECT * FROM {files} WHERE contextid = ? AND filename != ?";
-        $file_records = $DB->get_records_sql($sql, [$context->id, '.']);
+        $component = 'mod_' . $cm->modname;
 
+        // Use the extracted method
+        $teacher_content_areas = self::get_safe_teacher_fileareas();
+
+        // If this module type has no known safe content areas, skip file ingestion entirely.
+        if (!isset($teacher_content_areas[$component])) {
+            debugging("local_shula: skipping files for unsupported module type '$component'", DEBUG_DEVELOPER);
+            return [];
+        }
+
+        $filearea_list = $teacher_content_areas[$component];
+        list($in_sql, $in_params) = $DB->get_in_or_equal($filearea_list, SQL_PARAMS_QM);
+
+        // Filter strictly by context, component, AND filearea
+        $sql = "SELECT * FROM {files}
+                WHERE contextid = ?
+                  AND component = ?
+                  AND filename != ?
+                  AND filearea {$in_sql}";
+
+        $params = array_merge([$context->id, $component, '.'], $in_params);
+        $file_records = $DB->get_records_sql($sql, $params);
+        
         $file_items =[];
         
         foreach ($file_records as $record) {

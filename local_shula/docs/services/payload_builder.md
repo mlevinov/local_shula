@@ -31,6 +31,19 @@ Dynamically constructs items for native Moodle instances that don't have physica
 
 ### `build_file_items_from_cm($cm)`
 Queries Moodle's File Storage API to extract metadata and generate secure `pluginfile` URLs for physical files attached to a context.
+*   **Teacher-Authored Security:** Enforces a strict allowlist of teacher-only file areas (e.g., `mod_resource/content`, `mod_assign/introattachment`). Deliberately excludes student-authored attachments from modules like Wikis, Glossaries, and Forums to protect the integrity of the AI's knowledge base.
+
+### `get_safe_teacher_fileareas()`
+Returns the hardcoded mapping of Moodle components to their "safe" (teacher-authored) fileareas. 
+*   **Security Principle:** This acts as a firewall, ensuring that student privacy is maintained and the AI is not trained on potentially sensitive or irrelevant student submissions.
+*   **Locked Allowlist:** Any addition of new module support requires an explicit update to this list, accompanied by a security review.
+
+## Security & Privacy Validation
+
+To ensure that future updates don't accidentally leak student data, the plugin includes a dedicated PHPUnit test suite: `tests/payload_builder_test.php`.
+
+*   **Risk Mitigation:** The tests explicitly verify that high-risk areas (like `mod_forum` attachments or `mod_assign` submissions) are NOT in the allowlist.
+*   **Drift Protection:** An "allowlist size lock" test ensures that the number of supported modules doesn't grow silently, forcing developers to update tests when adding new features.
 
 ## Availability Parsing
 

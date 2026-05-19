@@ -1,6 +1,6 @@
 # Shula AI Moodle Integration (local_shula)
 
-**Version:** 1.2.4 (2026051803) | **Requires:** Moodle 4.1+
+**Version:** 1.2.5 (2026051900) | **Requires:** Moodle 4.1+
 
 This local Moodle plugin serves as the real-time bridge ("Door A") between the Moodle LMS and the Shula AI platform. It proactively "pushes" course structure, module availability, visibility toggles, and file metadata to the Shula backend using a highly optimized, asynchronous architecture.
 
@@ -31,10 +31,11 @@ This plugin implements the **Hierarchical v2.0 Ingestion Architecture**.
 
 ## Security & Privacy
 
-* **Zero User Data:** The payload builder extracts only course structure and file metadata. It does not access, read, or transmit student data, enrollments, grades, or forum posts.
+* **Strict Teacher-Authored Filter:** The payload builder implements a strict security allowlist of "safe" fileareas (e.g., `mod_resource/content`, `mod_assign/introattachment`). It explicitly ignores student-contributed files like forum attachments, wiki pages, or assignment submissions to ensure the AI's training data remains authoritative and private.
+* **Zero PII Leakage:** The plugin does not access or transmit student names, email addresses, grades, or personal identifiers. It focuses purely on curriculum content and structural metadata.
 * **Cryptographic Signatures:** Every webhook request is signed with an HMAC-SHA256 signature (`X-Moodle-Signature`) to guarantee authenticity between Moodle and the Shula backend.
 * **AI Opt-Out Tag:** Teachers maintain full control. By adding the configured tag (default: `no-shula`) to any file or module via Moodle's Core Tag API, the plugin immediately aborts indexing its contents.
-* **SSRF Protection:** External requests utilize Moodle's core `\curl` wrapper with built-in SSRF protections and strict SSL verification.
+* **Verified by Testing:** A dedicated PHPUnit test suite enforces these security boundaries, preventing silent regressions that could lead to data leakage.
 
 ---
 

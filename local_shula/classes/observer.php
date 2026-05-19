@@ -52,37 +52,36 @@ class observer {
             return false;
         }
 
-        // 1. Check if we already looked this up during this page load
+        // Check if we already looked this up during this page load
         if (isset(self::$active_course_cache[$courseid])) {
             return self::$active_course_cache[$courseid];
         }
 
-        // 2. Perform the DB queries
-        $is_active = false;
-        $ltis = $DB->get_records('lti', ['course' => $courseid]);
-        
-        foreach ($ltis as $lti) {
-            if (strpos($lti->toolurl, $identifier) !== false || strpos($lti->securetoolurl, $identifier) !== false) {
-                $is_active = true;
-                break; // Exit loop, go to cache save
-            }
-            if (!empty($lti->typeid)) {
-                $type = $DB->get_record('lti_types', ['id' => $lti->typeid]);
-                if ($type && strpos($type->baseurl, $identifier) !== false) {
-                    $is_active = true;
-                    break; // Exit loop, go to cache save
-                }
-                $configs = $DB->get_records('lti_types_config', ['typeid' => $lti->typeid]);
-                foreach ($configs as $config) {
-                    if (strpos($config->value, $identifier) !== false) {
-                        $is_active = true;
-                        break 2; // Break out of BOTH loops, go to cache save
-                    }
-                }
-            }
-        }
+        // Perform a single optimized DB query
+        $sql = "SELECT 1
+                FROM {lti} l
+            LEFT JOIN {lti_types} t        ON l.typeid = t.id
+            LEFT JOIN {lti_types_config} c ON t.id = c.typeid
+                WHERE l.course = :courseid
+                AND (
+                    l.toolurl       LIKE :id1
+                    OR l.securetoolurl LIKE :id2
+                    OR t.baseurl       LIKE :id3
+                    OR c.value         LIKE :id4
+                )";
 
-        // 3. Save to the static cache for the remainder of this request
+        $search = '%' . $identifier . '%';
+        $params = [
+            'courseid' => $courseid,
+            'id1'      => $search,
+            'id2'      => $search,
+            'id3'      => $search,
+            'id4'      => $search
+        ];
+
+        $is_active = $DB->record_exists_sql($sql, $params);
+
+        // Save to the static cache for the remainder of this request
         self::$active_course_cache[$courseid] = $is_active;
         return $is_active;
     }
