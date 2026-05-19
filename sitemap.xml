@@ -1,27 +1,3 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-    <url>
-         <loc>https://mlevinov.github.io/local_shula/</loc>
-         <lastmod>2026-05-19</lastmod>
-    </url>
-    <url>
-         <loc>https://mlevinov.github.io/local_shula/architecture/</loc>
-         <lastmod>2026-05-19</lastmod>
-    </url>
-    <url>
-         <loc>https://mlevinov.github.io/local_shula/services/client/</loc>
-         <lastmod>2026-05-19</lastmod>
-    </url>
-    <url>
-         <loc>https://mlevinov.github.io/local_shula/services/payload_builder/</loc>
-         <lastmod>2026-05-19</lastmod>
-    </url>
-    <url>
-         <loc>https://mlevinov.github.io/local_shula/tasks/background_tasks/</loc>
-         <lastmod>2026-05-19</lastmod>
-    </url>
-    <url>
-         <loc>https://mlevinov.github.io/local_shula/tasks/observer/</loc>
-         <lastmod>2026-05-19</lastmod>
-    </url>
 </urlset>
