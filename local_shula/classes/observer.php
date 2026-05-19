@@ -42,14 +42,20 @@ class observer {
      * Scans the course for LTI activities that match the configured Shula identifier.
      *
      * @param int $courseid The Moodle course ID.
+     * @param bool $clear_cache If true, ignores the static cache and forces a DB query.
      * @return bool True if Shula is active, false otherwise.
      */
-    private static function is_shula_active_in_course($courseid) {
+    private static function is_shula_active_in_course($courseid, $clear_cache = false) {
         global $DB;
         $identifier = get_config('local_shula', 'shula_lti_identifier');
         
         if (empty($identifier)) {
             return false;
+        }
+
+        // Invalidate the cache if explicitly requested
+        if ($clear_cache) {
+            unset(self::$active_course_cache[$courseid]);
         }
 
         // Check if we already looked this up during this page load
@@ -157,7 +163,9 @@ class observer {
         $modname = $event->other['modulename'] ?? 'UNKNOWN';
         
         if ($modname === 'lti') {
-            if (!self::is_shula_active_in_course($event->courseid)) {
+            // Force cache flush to evaluate the actual DB state post-deletion
+            if (!self::is_shula_active_in_course($event->courseid, true)) {
+                
                 // Fetch course to build snapshot
                 $course = $DB->get_record('course', ['id' => $event->courseid]);
                 $course_item = $course ? \local_shula\service\payload_builder::build_course_item($course) : null;
@@ -171,10 +179,14 @@ class observer {
                     'course_item' => $course_item // Pass the snapshot!
                 ]);
                 \core\task\manager::queue_adhoc_task($task);
+                
+                // Only exit if the entire course needs to be wiped
+                return; 
             }
-            return;
+            // Fall-through happens here if a duplicate Shula LTI tool was deleted but others remain.
         }
 
+        // Standard deletion handling (now safely catches duplicate LTI tools too)
         if (!self::is_shula_active_in_course($event->courseid)) return;
         self::queue_webhook_task('file_deleted', $event);
     }
