@@ -788,7 +788,7 @@
 <li><strong>Event Fired:</strong> A user performs an action in Moodle (e.g., creating a module, hiding a section). Moodle fires the corresponding <code>\core\event\*</code> class.</li>
 <li><strong>Capture:</strong> The <code>observer</code> class catches the event.</li>
 <li><strong>Restore Guard:</strong> <code>is_restoring()</code> checks if the event is part of a bulk course restore or plugin installation. If so, individual events are suppressed to prevent "restore storms."</li>
-<li><strong>Active Guard:</strong> <code>is_shula_active_in_course()</code> checks if the Shula LTI tool is present anywhere in the course. It uses a static cache to prevent redundant database queries during a single page load.</li>
+<li><strong>Active Guard:</strong> <code>is_shula_active_in_course()</code> checks if the Shula LTI tool is present anywhere in the course. It uses a static cache to prevent redundant database queries during a single page load. It supports an optional <code>$clear_cache</code> parameter to force a fresh database check when accurate state is critical (e.g., during tool deletion).</li>
 <li><strong>Dispatch:</strong> If the guards pass, the observer packages the event IDs and queues the appropriate <code>adhoc_task</code>.</li>
 </ol>
 <h2 id="handled-events">Handled Events<a class="headerlink" href="#handled-events" title="Permanent link">&para;</a></h2>
@@ -811,7 +811,11 @@
 <li><code>course_module_deleted</code></li>
 <li><code>course_module_updated</code> (Crucial for detecting visibility toggles on specific files)</li>
 <li><strong>Action:</strong> Queues <code>send_webhook</code> (File Created, File Deleted, File Updated).</li>
-<li><strong>LTI Edge Case:</strong> If the module created/deleted is the Shula LTI tool itself, it triggers a full <code>bulk_sync</code> or teardown event.</li>
+<li><strong>LTI Edge Case:</strong> <ul>
+<li><strong>Creation:</strong> If a Shula LTI tool is created, it triggers a full <code>bulk_sync</code> task to provision the course.</li>
+<li><strong>Deletion:</strong> If an LTI tool is deleted, the observer forces a cache flush to evaluate the actual remaining state. If no other Shula LTI tools exist in the course, it generates a course snapshot using <code>payload_builder::build_course_item</code> and queues a <code>lti_tool_deleted</code> teardown event to the backend. This ensures the backend can clean up vectors if the institution disconnects the tool.</li>
+</ul>
+</li>
 </ul>
 
 
