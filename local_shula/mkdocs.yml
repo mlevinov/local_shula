@@ -1,0 +1,60 @@
+# === Site Information ===
+site_name: Shula AI Moodle Plugin
+site_description: 'Documentation for the Shula AI (local_shula) Moodle Plugin.'
+site_author: 'Your Name'
+
+site_url: 'https://mlevinov.github.io/local_shula/'
+
+# === Repository ===
+repo_name: 'mlevinov/local_shula'
+repo_url: 'https://github.com/your-github-username/your-repo-name'
+edit_uri: 'edit/main/docs/' # Allows users to suggest edits
+
+site_name: Shula Moodle Plugin
+site_description: Documentation for the local_shula Moodle plugin.
+site_author: Shula AI
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.integrate
+    - content.code.copy
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+  - Services:
+    - Payload Builder: services/payload_builder.md
+    - API Client: services/client.md
+  - Tasks & Webhooks:
+    - Event Observer: tasks/observer.md
+    - Background Tasks: tasks/background_tasks.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - toc:
+      permalink: true
+
