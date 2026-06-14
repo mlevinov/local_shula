@@ -19,36 +19,9 @@ defined('MOODLE_INTERNAL') || die();
  *
  * Constructs hierarchical JSON structures representing Moodle courses, sections, and modules.
  * Plugin: local_shula
- * Version: 2026051803 (Release 1.2.4)
+ * Version: 2026051901 (Release 1.2.6)
  */
 class payload_builder {
-
-    /**
-     * Generates the complete, nested JSON tree for a Bulk Sync event.
-     * Hierarchy: Course -> Section -> Module -> File/Content
-     *
-     * @param int $courseid The Moodle course ID.
-     * @return array The complete course tree payload.
-     */
-    public static function build_course_tree($courseid) {
-        global $DB;
-
-        $course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
-        $modinfo = get_fast_modinfo($course);
-
-        $payload = [
-            'course' => self::build_course_item($course),
-            'sections' => []
-        ];
-
-        // Iterate over all sections in the course
-        foreach ($modinfo->get_section_info_all() as $section_info) {
-            $section_item = self::build_section_item($section_info, $modinfo);
-            $payload['sections'][] = $section_item;
-        }
-
-        return $payload;
-    }
 
     /**
      * Builds the top-level MoodleCourseItem schema.
@@ -122,6 +95,20 @@ class payload_builder {
         global $DB;
 
         $instance = $DB->get_record($cm->modname, ['id' => $cm->instance]);
+
+        if (!$instance) {
+            debugging("local_shula: Module instance {$cm->instance} for {$cm->modname} no longer exists.", DEBUG_DEVELOPER);
+            return [
+                'course_module_id' => (int)$cm->id,
+                'instance_id'      => (int)$cm->instance,
+                'name'             => $cm->name,
+                'modname'          => $cm->modname,
+                'deleted'          => true,
+                'files_count'      => 0,
+                'files_size'       => 0,
+                'files'            => []
+            ];
+        }
 
         // Fetch the configured opt-out tag (fallback to 'no-shula')
         $target_tag = get_config('local_shula', 'shula_opt_out_tag');

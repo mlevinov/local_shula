@@ -15,3 +15,15 @@ $string['opt_out_tag_desc'] = 'Teachers can add this specific tag to any Moodle 
 $string['task_send_webhook'] = 'Shula AI: Send Individual File Webhook';
 $string['task_bulk_sync'] = 'Shula AI: Process Course Bulk Sync';
 $string['privacy:metadata:reason'] = 'The Shula AI plugin does not store personal user data locally. It transmits course structure and file context to the Shula external service to power the AI tutor.';
+
+// Exception Strings
+$string['webhook_failed'] = 'The Shula outbound sync dispatch failed: HTTP Error Status {$a}';
+
+// Privacy API Strings
+$string['privacy:metadata:shula'] = 'The Shula AI plugin transmits course structures, context text, and material references to an external intelligence tutor platform.';
+$string['privacy:metadata:shula:courseid'] = 'The unique database identifier representing the active course space.';
+$string['privacy:metadata:shula:fullname'] = 'The descriptive title name assigned to the managed Moodle course.';
+$string['privacy:metadata:shula:summary'] = 'The raw introductory content descriptor details of the space.';
+$string['privacy:metadata:shula:sections'] = 'The structural modular block layout labels organizing the workspace.';
+$string['privacy:metadata:shula:pagecontent'] = 'The packaged internal textual data assets extracted from Labels and Pages.';
+$string['privacy:metadata:shula:fileurls'] = 'Secure web service references providing document access vectors to the AI system.';

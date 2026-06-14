@@ -19,7 +19,7 @@ defined('MOODLE_INTERNAL') || die();
  *
  * Handles Moodle events related to courses, modules, and sections.
  * Plugin: local_shula
- * Version: 2026051803 (Release 1.2.4)
+ * Version: 2026051901 (Release 1.2.6)
  */
 class observer {
 
@@ -76,7 +76,9 @@ class observer {
                     OR c.value         LIKE :id4
                 )";
 
-        $search = '%' . $identifier . '%';
+        // Securely escape LIKE wildcards (%, _) to prevent DB matching manipulation
+        $safe_identifier = $DB->sql_like_escape($identifier);
+        $search = '%' . $safe_identifier . '%';
         $params = [
             'courseid' => $courseid,
             'id1'      => $search,
@@ -104,6 +106,35 @@ class observer {
         $course = $event->get_record_snapshot('course', $event->courseid);
         if (!$course) return;
 
+        // --- P2 PRIVACY FIX: Only send if Shula was actually active in this course! ---
+        // Since the modules are already deleted from the DB at this stage, we must inspect 
+        // the snapshot data, OR we rely on the fact that if Shula was active, it would have 
+        // been deleted moments ago triggering an 'lti_tool_deleted' event. 
+        // To be absolutely safe with the snapshot:
+        $modinfo = get_fast_modinfo($course); // Works with course object
+        $identifier = get_config('local_shula', 'shula_lti_identifier');
+        $was_shula_active = false;
+
+        // Scan the snapshot for the Shula LTI tool
+        if (!empty($identifier)) {
+            $cms = $modinfo->get_cms();
+            foreach ($cms as $cm) {
+                if ($cm->modname === 'lti') {
+                    // Quick string match on the name or toolurl if available in snapshot
+                    if (strpos($cm->name, $identifier) !== false) {
+                        $was_shula_active = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!$was_shula_active) {
+            mtrace("Shula: Course {$event->courseid} deleted, but Shula was not active. Dropping webhook for privacy.");
+            return;
+        }
+        // ------------------------------------------------------------------------------
+
         // 2. Pre-build the JSON schema immediately before the database is wiped
         $course_item = \local_shula\service\payload_builder::build_course_item($course);
 
@@ -118,7 +149,7 @@ class observer {
         ]);
         \core\task\manager::queue_adhoc_task($task);
     }
-
+    
     /**
      * Observer for course update events.
      *
@@ -204,45 +235,58 @@ class observer {
     }
     
     /**
-     * Placeholder observer for course creation events.
-     *
-     * @param \core\event\course_created $event The event object.
-     */
-    public static function course_created(\core\event\course_created $event) {
-        return;
-    }
-
-    /**
-     * Helper to queue a generic module-level webhook task.
+     * Helper to queue a generic module-level webhook task with debouncing.
      *
      * @param string $event_type The type of event (e.g., 'file_created').
      * @param object $event The Moodle event object.
      */
     private static function queue_webhook_task($event_type, $event) {
-        $task = new \local_shula\task\send_webhook();
-        $task->set_custom_data([
+        global $DB;
+        
+        $customdata = [
             'event_type' => $event_type,
             'cmid'       => $event->contextinstanceid,
             'courseid'   => $event->courseid,
             'modname'    => $event->other['modulename'] ?? 'unknown'
-        ]);
+        ];
+
+        // DEBOUNCE: Check if an exact duplicate task is already pending
+        $classname = '\\local_shula\\task\\send_webhook';
+        $json_data = json_encode($customdata);
+        if ($DB->record_exists('task_adhoc', ['classname' => $classname, 'customdata' => $json_data])) {
+            return; // Duplicate pending, skip queueing
+        }
+
+        $task = new \local_shula\task\send_webhook();
+        $task->set_custom_data($customdata);
         \core\task\manager::queue_adhoc_task($task);
     }
 
     /**
-     * Helper to queue a course-level sync task.
+     * Helper to queue a course-level sync task with debouncing.
      *
      * @param string $event_type The type of event (e.g., 'course_sync').
      * @param object $event The Moodle event object.
      */
     private static function queue_course_task($event_type, $event) {
-        $task = new \local_shula\task\send_webhook();
-        $task->set_custom_data([
+        global $DB;
+
+        $customdata = [
             'event_type' => $event_type,
             'courseid'   => $event->courseid,
             'cmid'       => null, 
             'modname'    => null
-        ]);
+        ];
+
+        // DEBOUNCE: Check if an exact duplicate task is already pending
+        $classname = '\\local_shula\\task\\send_webhook';
+        $json_data = json_encode($customdata);
+        if ($DB->record_exists('task_adhoc', ['classname' => $classname, 'customdata' => $json_data])) {
+            return; // Duplicate pending, skip queueing
+        }
+
+        $task = new \local_shula\task\send_webhook();
+        $task->set_custom_data($customdata);
         \core\task\manager::queue_adhoc_task($task);
     }
 

@@ -6,7 +6,7 @@
  * and maps them to the observer class methods.
  *
  * Plugin: local_shula
- * Version: 2026051803 (Release 1.2.4)
+ * Version: 2026051901 (Release 1.2.6)
  *
  * @package    local_shula
  * @copyright  2024 Shula AI
@@ -34,11 +34,6 @@ $observers = [
     [
         'eventname'   => '\core\event\course_updated',
         'callback'    => '\local_shula\observer::course_updated',
-        'internal'    => false,
-    ],
-    [
-        'eventname'   => '\core\event\course_created',
-        'callback'    => '\local_shula\observer::course_created',
         'internal'    => false,
     ],
     [

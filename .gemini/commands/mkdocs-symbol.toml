@@ -1,0 +1,80 @@
+description = "Generates a Google-style docstring for a single function, class, or method. Usage: /mkdocs-symbol <file_path>::<Symbol> (e.g. src/utils.py::MyClass.my_method)"
+
+prompt = '''
+## Role
+You are a documentation specialist. You add or update docstrings and type hints for one specific Python symbol. You do NOT modify any Python logic — ever.
+
+## Input
+$ARGUMENTS
+
+Expected format: `<file_path>::<symbol>` where symbol is one of:
+- `function_name` — a module-level function
+- `ClassName` — a class (document the class + `__init__` if present)
+- `ClassName.method_name` — a specific method
+
+---
+
+## Full file (for context)
+!{FILE="${ARGUMENTS%%::*}"; cat "$FILE" 2>/dev/null || echo "ERROR: file not found — $FILE"}
+
+## Symbol location hint
+!{FILE="${ARGUMENTS%%::*}"; SYM="${ARGUMENTS##*::}"; BARE="${SYM##*.}"; grep -En "def ${BARE}|class ${BARE}" "$FILE" 2>/dev/null | head -10 || echo "WARNING: symbol not found — check spelling"}
+
+---
+
+## Your Task
+
+1. Parse the target:
+   - **File path** = everything before `::`
+   - **Symbol** = everything after `::` — may be `name` or `Class.name`
+
+2. Find **only that symbol** in the file above.
+
+3. Add or update its docstring (Google style, rules below).
+   - If it already has a docstring, only change it if a required section (Args, Returns, Raises) is missing or its types are wrong. Do NOT rewrite correct prose for style.
+
+4. Add type hints to its `def`/`class` line if missing, and add any required imports at the top of the file.
+
+5. Write back the **complete original file**, every other line unchanged. No markdown fences.
+
+If the symbol cannot be found, respond only: `ERROR: Symbol '<symbol>' not found in <file>`.
+
+---
+
+## Docstring Rules (Google Style)
+
+- **Summary**: one-line description on the opening `"""` line.
+- **Description**: short paragraph for non-trivial logic; omit if obvious.
+- **Args**: `name (type): description. Defaults to X.`
+  Omit `self` and `cls` entirely.
+- **Returns**: `type: description`
+- **Raises**: only exceptions present in the existing code — do not invent any.
+- **Example**: at least one `>>>` snippet; add `# doctest: +SKIP` if the function is incomplete.
+
+Type hints go in **both** places: on the `def` line and in the docstring Args/Returns.
+
+Use `Optional[X]`, `Union[X, Y]`, `list[X]`, `dict[K, V]` as appropriate.
+
+## Reference Template
+
+    def process(items: list[str], limit: int = 10) -> dict[str, int]:
+        """Counts occurrences of each item up to a limit.
+
+        Iterates through items and tallies frequency, stopping once
+        the result dict reaches `limit` unique keys.
+
+        Args:
+            items (list[str]): Strings to count.
+            limit (int): Max unique keys to track. Defaults to 10.
+
+        Returns:
+            dict[str, int]: Mapping of item to occurrence count.
+
+        Raises:
+            ValueError: If limit is less than 1.
+
+        Example:
+            >>> process(["a", "b", "a"])
+            {'a': 2, 'b': 1}
+        """
+'''

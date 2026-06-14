@@ -19,7 +19,7 @@ defined('MOODLE_INTERNAL') || die();
  *
  * Lightweight adhoc task to send a section-level payload (SectionUpdatedPayload) to Django.
  * Plugin: local_shula
- * Version: 2026051803 (Release 1.2.4)
+ * Version: 2026051901 (Release 1.2.6)
  */
 class send_section_webhook extends \core\task\adhoc_task {
 
@@ -79,6 +79,17 @@ class send_section_webhook extends \core\task\adhoc_task {
             'section'        => $section_item
         ];
 
-        \local_shula\service\client::send($payload);
+        try {
+            \local_shula\service\client::send($payload);
+        } catch (\moodle_exception $e) {
+            // Moodle exceptions store the passed variable in $e->a (which we set to the HTTP code)
+            if ($e->errorcode === 'webhook_failed' && is_numeric($e->a) && $e->a >= 400 && $e->a < 500) {
+                mtrace("Shula: Bad request payload (HTTP {$e->a}). Dropping task to prevent queue stall.");
+                return; // Gracefully exit without throwing, removing it from the retry queue
+            }
+            
+            // It's a 5xx error or connection timeout. Throw it so Moodle's cron retries it later.
+            throw $e; 
+        }
     }
 }

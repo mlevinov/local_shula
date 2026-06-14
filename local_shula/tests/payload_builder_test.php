@@ -71,4 +71,39 @@ class payload_builder_test extends advanced_testcase {
             "The number of allowed modules has changed. If this is intentional, verify the new module does not leak student data, then update this test."
         );
     }
+
+    public function test_extract_unlock_date_handles_nested_rules(): void {
+        $json = '{"op":"&","c":[{"type": "date", "d":">=", "t":1700000000}]}';
+        
+        $method = new \ReflectionMethod(\local_shula\service\payload_builder::class, 'extract_unlock_date');
+        $method->setAccessible(true);
+        $result = $method->invoke(null, $json);
+        
+        $this->assertSame(1700000000, $result);
+    }
+
+    public function test_extract_unlock_date_returns_null_on_invalid_json(): void {
+        $method = new \ReflectionMethod(\local_shula\service\payload_builder::class, 'extract_unlock_date');
+        $method->setAccessible(true);
+        $result = $method->invoke(null, 'not json');
+        
+        $this->assertNull($result);
+    }
+
+    public function test_no_shula_tag_excludes_files(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $page = $this->getDataGenerator()->create_module('page', ['course' => $course->id]);
+        
+        // Apply the opt-out tag
+        \core_tag_tag::set_item_tags('core', 'course_modules', $page->cmid, \context_module::instance($page->cmid), ['no-shula']);
+        
+        $modinfo = get_fast_modinfo($course);
+        $cm = $modinfo->cms[$page->cmid];
+        
+        $result = \local_shula\service\payload_builder::build_module_item($cm);
+        
+        $this->assertTrue($result['ai_restricted']);
+        $this->assertEmpty($result['files']);
+    }
 }

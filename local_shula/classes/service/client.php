@@ -21,7 +21,7 @@ require_once($CFG->libdir . '/filelib.php');
  *
  * Sends JSON payloads to the configured Shula webhook endpoint.
  * Plugin: local_shula
- * Version: 2026051803 (Release 1.2.4)
+ * Version: 2026051901 (Release 1.2.6)
  */
 class client {
     
@@ -46,6 +46,7 @@ class client {
         }
 
         $payload['issuer'] = $CFG->wwwroot;
+        $payload['sent_at'] = time();
         $json_payload = json_encode($payload);
         $signature = hash_hmac('sha256', $json_payload, $secret);
 
@@ -55,7 +56,7 @@ class client {
         if (debugging('', DEBUG_DEVELOPER)) {
             $pretty_payload = json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
             mtrace("\n=======================================================");
-            mtrace("🚀 [" . date('Y-m-d H:i:s') . "] SHULA DISPATCH: {$payload['event_type']}");
+            mtrace("[SHULA] [" . date('Y-m-d H:i:s') . "] DISPATCH: {$payload['event_type']}");
             mtrace("=======================================================");
             mtrace($pretty_payload);
             mtrace("=======================================================\n");
@@ -69,6 +70,7 @@ class client {
         $curl = new \curl();
         
         $curl->setHeader('Content-Type: application/json');
+        $curl->setHeader('X-Signature-Version: v1'); // Future-proofing
         $curl->setHeader('X-Moodle-Signature: ' . $signature);
         
          // Strict production connection options

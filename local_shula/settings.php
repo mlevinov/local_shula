@@ -6,7 +6,7 @@
  * for the Shula AI tutor integration.
  *
  * Plugin: local_shula
- * Version: 2026051803 (Release 1.2.4)
+ * Version: 2026051901 (Release 1.2.6)
  *
  * @package    local_shula
  * @copyright  2024 Shula AI
@@ -39,7 +39,7 @@ if ($hassiteconfig) {
         'local_shula/shula_webhook_endpoint',
         get_string('webhook_endpoint', 'local_shula'),
         get_string('webhook_endpoint_desc', 'local_shula'),
-        'https://shula-ai.com/api/v1/webhook/moodle/', // Requires an absolute URL
+        'https://example.shula-ai.com/api/v1/webhook/moodle/',
         PARAM_URL
     ));
 
@@ -48,7 +48,7 @@ if ($hassiteconfig) {
         get_string('lti_identifier', 'local_shula'),
         get_string('lti_identifier_desc', 'local_shula'),
         'shula',
-        PARAM_RAW
+        PARAM_HOST
     ));
 
     // The AI Exclusion Tag Setting
